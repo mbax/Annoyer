@@ -1,159 +1,150 @@
 package org.kitteh.annoyer;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Random;
+
+import net.minecraft.server.Packet60Explosion;
+
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.block.Block;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event;
+import org.bukkit.event.Event.Priority;
+import org.bukkit.event.Event.Type;
+import org.bukkit.event.player.PlayerListener;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class Annoyer extends JavaPlugin {
 
+    private class Durp implements Runnable {
+        @Override
+        public void run() {
+            for (final Player player : Annoyer.this.annoyanceList) {
+                if (player != null) {
+                    final Location loc = player.getLocation();
+                    final int x = ((int) loc.getX()) + (Annoyer.this.random.nextInt(21) - 10);
+                    final int y = ((int) loc.getY()) + (Annoyer.this.random.nextInt(11) - 5);
+                    final int z = ((int) loc.getZ()) + (Annoyer.this.random.nextInt(21) - 10);
+                    if (Annoyer.this.random.nextDouble() < 0.03) {
+                        final Packet60Explosion boom = new Packet60Explosion(x, y, z, 10, new HashSet<Block>());
+                        ((CraftPlayer) player).getHandle().netServerHandler.sendPacket(boom);
+                    }
+                    final Location target = new Location(player.getWorld(), x, y, z);
+                    final Block block = player.getWorld().getBlockAt(target);
+                    if ((block != null) && !block.getType().equals(Material.AIR)) {
+                        player.sendBlockChange(target, Annoyer.this.newMat(), (byte) 0);
+                    }
+                    if (Annoyer.this.random.nextDouble() < 0.03) {
+                        for(int boop=0;boop<20;boop++){
+                            player.sendMessage(" ");
+                        }
+                    }
+                }
+            }
+        }
+    }
     private final ListenBlock blockListener = new ListenBlock(this);
     private final ListenPlayer playerListener = new ListenPlayer(this);
-    public final ArrayList<String> standardAnnoyance = new ArrayList<String>();
-    public final ArrayList<String> bonusAnnoyance = new ArrayList<String>();
 
-    public boolean enabled(Player player) {
-        return this.standardAnnoyance.contains(player.getName());
+    private final ArrayList<Player> annoyanceList = new ArrayList<Player>();
+
+    public Random random = new Random();
+
+    private int highestBlockID;
+
+    public boolean annoyed(Player player) {
+        return this.annoyanceList.contains(player);
     }
 
-    public boolean enabled1(Player player) {
-        return this.bonusAnnoyance.contains(player.getName());
+    public void log(String message) {
+        this.getServer().getLogger().info("[Annoyer] " + message);
     }
 
-    public boolean canUseAnnoyOthers(Player p) {
-        return p.hasPermission("annoy.others");
+    public Material newMat() {
+        Material newMat = null;
+        while (newMat == null) {
+            newMat = Material.getMaterial(this.random.nextInt(this.highestBlockID));
+        }
+        return newMat;
+    }
+
+    @Override
+    public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
+        if (!sender.hasPermission("annoyer.use")) {
+            sender.sendMessage(ChatColor.RED + "You do not have permission to use this command.");
+            return true;
+        }
+        if (args.length < 1) {
+            sender.sendMessage(ChatColor.RED + "You need to specify a player.");
+            return true;
+        }
+        final Player target = this.getServer().getPlayer(args[0]);
+        if (target == null) {
+            sender.sendMessage(ChatColor.RED + "Cannot find " + ChatColor.LIGHT_PURPLE + args[0] + ChatColor.RED + " on the server");
+            return true;
+        }
+        final String command = commandLabel.toLowerCase();
+        if (command.equals("annoy")) {
+            this.annoyanceList.add(target);
+            this.update(ChatColor.RED + "[Annoyer] " + sender.getName() + " added " + ChatColor.LIGHT_PURPLE + target.getName() + ChatColor.RED + ".");
+            this.log(sender.getName() + " annoyed " + target.getName());
+            return true;
+        }
+        if (command.equals("unannoy")) {
+            if (this.annoyanceList.remove(target)) {
+                this.update(ChatColor.RED + "[Annoyer] " + sender.getName() + " removed " + ChatColor.LIGHT_PURPLE + target.getName() + ChatColor.RED + ".");
+                this.log(sender.getName() + " annoyed " + target.getName());
+            } else {
+                sender.sendMessage(ChatColor.RED + "[Annoyer] Player was not being bothered.");
+            }
+            return true;
+        }
+        return true;
+    }
+
+    @Override
+    public void onDisable() {
+        this.getServer().getLogger().info("[Annoyer] Disabled!");
     }
 
     @Override
     public void onEnable() {
         final PluginManager pm = this.getServer().getPluginManager();
-        pm.registerEvent(Event.Type.BLOCK_BREAK, this.blockListener, Event.Priority.Normal, this);
-        pm.registerEvent(Event.Type.BLOCK_PLACE, this.blockListener, Event.Priority.Normal, this);
-        pm.registerEvent(Event.Type.PLAYER_MOVE, this.playerListener, Event.Priority.Normal, this);
-        this.getServer().getLogger().info("[Annoyer] Annoyer has been enabled!");
-    }
-
-    @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String commandLabel, String[] args) {
-        if (commandLabel.equalsIgnoreCase("annoy")) {
-            final String p = args[0];
-            if (args.length == 0) {
-                final Player ss = (Player) sender;
-                ss.sendMessage(ChatColor.RED + "Usage:");
-                ss.sendMessage(ChatColor.RED + "/annoy playername");
-                return true;
-            }
-            if (this.canUseAnnoyOthers((Player) sender)) {
-                final Player annoyee = this.getServer().getPlayer(p);
-                if (annoyee == null) {
-                    sender.sendMessage(ChatColor.RED + "That user doesn't exist, or isn't online.");
-                } else {
-                    this.addTD(annoyee);
-                    final Player anon = (Player) sender;
-                    anon.sendMessage(ChatColor.RED + "You are now annoying " + p);
+        pm.registerEvent(Type.BLOCK_BREAK, this.blockListener, Priority.Highest, this);
+        pm.registerEvent(Type.BLOCK_PLACE, this.blockListener, Priority.Highest, this);
+        pm.registerEvent(Type.PLAYER_MOVE, this.playerListener, Priority.Highest, this);
+        pm.registerEvent(Type.PLAYER_CHAT, this.playerListener, Priority.Lowest, this);
+        pm.registerEvent(Type.PLAYER_QUIT, new PlayerListener() {
+            @Override
+            public void onPlayerQuit(PlayerQuitEvent event) {
+                if (Annoyer.this.annoyanceList.remove(event.getPlayer())) {
+                    Annoyer.this.update(ChatColor.RED + "[Annoyer] " + ChatColor.LIGHT_PURPLE + event.getPlayer().getName() + ChatColor.RED + " dodged annoyance");
                 }
-            } else {
-                final Player s = (Player) sender;
-                s.sendMessage(ChatColor.RED + "You don't have permisson to use that command");
+            }
+        }, Priority.Normal, this);
+        for (int x = 0; x < 256; x++) {
+            if (Material.getMaterial(x) != null) {
+                this.highestBlockID = x;
             }
         }
-        if (commandLabel.equalsIgnoreCase("extrannoy")) {
-            final String p = args[0];
-            if (args.length == 0) {
-                final Player ss = (Player) sender;
-                ss.sendMessage(ChatColor.RED + "Usage:");
-                ss.sendMessage(ChatColor.RED + "/extrannoy playername");
-            }
-            if (this.canUseAnnoyOthers((Player) sender)) {
-                final Player annoyee = this.getServer().getPlayer(p);
-                if (annoyee == null) {
-                    sender.sendMessage(ChatColor.RED + "That user doesn't exist, or isn't online.");
-                } else {
-                    this.addE(annoyee);
-                    final Player anon = (Player) sender;
-                    anon.sendMessage(ChatColor.RED + "You are now extrannoying " + p);
-                }
-            } else {
-                final Player s = (Player) sender;
-                s.sendMessage(ChatColor.RED + "You don't have permisson to extrannoy!");
+        this.highestBlockID++;
+        this.getServer().getScheduler().scheduleAsyncRepeatingTask(this, new Durp(), 20, 20);
+        this.getServer().getLogger().info("[Annoyer] Enabled!");
+    }
+
+    public void update(String message) {
+        for (final Player player : this.getServer().getOnlinePlayers()) {
+            if ((player != null) && player.hasPermission("annoyer.use")) {
+                player.sendMessage(message);
             }
         }
-        if (commandLabel.equalsIgnoreCase("unannoy")) {
-            final String p = args[0];
-            if (args.length == 0) {
-                final Player ss = (Player) sender;
-                ss.sendMessage(ChatColor.RED + "Usage:");
-                ss.sendMessage(ChatColor.RED + "/unannoy playername");
-            }
-            if (this.canUseAnnoyOthers((Player) sender)) {
-                final Player annoyee = this.getServer().getPlayer(p);
-                if (annoyee == null) {
-                    sender.sendMessage(ChatColor.RED + "That user doesn't exist, or isn't online.");
-                } else {
-                    this.removeTD(annoyee);
-                    final Player anon = (Player) sender;
-                    anon.sendMessage(ChatColor.GREEN + "You have stopped annoying " + p);
-                }
-            } else {
-                final Player s = (Player) sender;
-                s.sendMessage(ChatColor.RED + "You don't have permisson to unannoy!");
-            }
-
-            return true;
-        }
-        if (commandLabel.equalsIgnoreCase("unextrannoy")) {
-            final String p = args[0];
-            if (args.length == 0) {
-                final Player ss = (Player) sender;
-                ss.sendMessage(ChatColor.RED + "Usage:");
-                ss.sendMessage(ChatColor.RED + "/unextrannoy playername");
-            }
-            if (this.canUseAnnoyOthers((Player) sender)) {
-                final Player annoyee = this.getServer().getPlayer(p);
-                if (annoyee == null) {
-                    sender.sendMessage(ChatColor.RED + "That user doesn't exist, or isn't online.");
-                } else {
-                    this.removeE(annoyee);
-                    final Player anon = (Player) sender;
-                    anon.sendMessage(ChatColor.GREEN + "You have stopped extrannoying " + p);
-                }
-            } else {
-                final Player s = (Player) sender;
-                s.sendMessage(ChatColor.RED + "You don't have permisson to unextrannoy!");
-            }
-
-            return true;
-        }
-
-        return false;
     }
 
-    @Override
-    public void onDisable() {
-        this.getServer().getLogger().info("[Annoyer] Annoyer has been disabled!");
-    }
-
-    public void removeTD(Player player) {
-        this.standardAnnoyance.remove(player);
-        player.sendMessage(ChatColor.GREEN + "You are no longer being annoyed!");
-    }
-
-    public void addTD(Player player) {
-        this.standardAnnoyance.add(player.getName());
-        player.sendMessage(ChatColor.RED + "You are now being annoyed!");
-    }
-
-    public void removeE(Player player) {
-        this.bonusAnnoyance.remove(player);
-        player.sendMessage(ChatColor.GREEN + "You are no longer being extrannoyed!");
-    }
-
-    public void addE(Player player) {
-        this.bonusAnnoyance.add(player.getName());
-        player.sendMessage(ChatColor.RED + "You are now being extrannoyed!");
-    }
 }

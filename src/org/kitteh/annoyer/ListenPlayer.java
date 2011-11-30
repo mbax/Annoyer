@@ -1,20 +1,39 @@
 package org.kitteh.annoyer;
 
 import org.bukkit.ChatColor;
-import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerChatEvent;
 import org.bukkit.event.player.PlayerListener;
 import org.bukkit.event.player.PlayerMoveEvent;
 
 public class ListenPlayer extends PlayerListener {
-    public static Annoyer plugin1;
+    private Annoyer annoyer;
 
-    public ListenPlayer(Annoyer instance) {
-        plugin1 = instance;
+    public ListenPlayer(Annoyer annoyer) {
+        this.annoyer = annoyer;
     }
 
+    @Override
     public void onPlayerMove(PlayerMoveEvent event) {
-        Player player = event.getPlayer();
-        if (plugin1.enabled1(player))
-            player.sendMessage(ChatColor.AQUA + "OMG U MOVED! WHY? DID YOU NOT LIKE IT WHERE U WERE?");
+        if (this.annoyer.annoyed(event.getPlayer()) && (this.annoyer.random.nextDouble() > 0.99)) {
+            event.getPlayer().sendMessage(ChatColor.getByCode(this.annoyer.random.nextInt(16)) + "You moved!");
+        }
+    }
+
+    @Override
+    public void onPlayerChat(PlayerChatEvent event) {
+        if (this.annoyer.annoyed(event.getPlayer())) {
+            if (this.annoyer.random.nextDouble() > 0.9) {
+                event.setMessage(event.getMessage().replaceAll("[aeiouy]", ""));
+                return;
+            }
+            if (this.annoyer.random.nextDouble() > 0.9) {
+                event.setCancelled(true);
+                event.setMessage(" ");//For chat plugins that don't pay full attention
+                return;
+            }
+            if (this.annoyer.random.nextDouble() > 0.9) {
+                event.getPlayer().sendMessage(ChatColor.getByCode(this.annoyer.random.nextInt(16)) + "You said something in chat!");
+            }
+        }
     }
 }

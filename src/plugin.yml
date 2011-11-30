@@ -1,0 +1,12 @@
+name: Annoyer
+main: org.kitteh.annoyer.Annoyer
+version: 1.3
+author: mbaxter
+description: Annoy your enemies!
+commands:
+  annoy:
+    Description: Annoy a player
+    Usage: /annoy <name>
+  unannoy:
+    Description: Stop pestering a player
+    Usage: /unannoy <playername>
