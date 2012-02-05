@@ -1,25 +1,21 @@
 package org.kitteh.annoyer;
 
 import org.bukkit.ChatColor;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerChatEvent;
-import org.bukkit.event.player.PlayerListener;
 import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
 
-public class ListenPlayer extends PlayerListener {
-    private Annoyer annoyer;
+public class ListenPlayer implements Listener {
+    private final Annoyer annoyer;
 
     public ListenPlayer(Annoyer annoyer) {
         this.annoyer = annoyer;
     }
 
-    @Override
-    public void onPlayerMove(PlayerMoveEvent event) {
-        if (this.annoyer.annoyed(event.getPlayer()) && (this.annoyer.random.nextDouble() > 0.99)) {
-            event.getPlayer().sendMessage(ChatColor.getByCode(this.annoyer.random.nextInt(16)) + "You moved!");
-        }
-    }
-
-    @Override
+    @EventHandler(priority = EventPriority.LOWEST)
     public void onPlayerChat(PlayerChatEvent event) {
         if (this.annoyer.annoyed(event.getPlayer())) {
             if (this.annoyer.random.nextDouble() > 0.9) {
@@ -32,8 +28,21 @@ public class ListenPlayer extends PlayerListener {
                 return;
             }
             if (this.annoyer.random.nextDouble() > 0.9) {
-                event.getPlayer().sendMessage(ChatColor.getByCode(this.annoyer.random.nextInt(16)) + "You said something in chat!");
+                this.annoyer.message(event.getPlayer(), "You said something in chat!");
             }
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST)
+    public void onPlayerMove(PlayerMoveEvent event) {
+        if (this.annoyer.annoyed(event.getPlayer()) && (this.annoyer.random.nextDouble() > 0.99)) {
+            this.annoyer.message(event.getPlayer(), "You moved!");
+        }
+    }
+
+    public void onPlayerQuit(PlayerQuitEvent event) {
+        if (this.annoyer.annoyanceList.remove(event.getPlayer())) {
+            this.annoyer.update(ChatColor.RED + "[Annoyer] " + ChatColor.LIGHT_PURPLE + event.getPlayer().getName() + ChatColor.RED + " dodged annoyance");
         }
     }
 }

@@ -14,10 +14,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.craftbukkit.entity.CraftPlayer;
 import org.bukkit.entity.Player;
-import org.bukkit.event.Event.Priority;
-import org.bukkit.event.Event.Type;
-import org.bukkit.event.player.PlayerListener;
-import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -41,23 +37,26 @@ public class Annoyer extends JavaPlugin {
                     if ((block != null) && !block.getType().equals(Material.AIR)) {
                         player.sendBlockChange(target, Annoyer.this.newMat(), (byte) 0);
                     }
-                    if (Annoyer.this.random.nextDouble() < 0.03) {
-                        for(int boop=0;boop<20;boop++){
+                    if (Annoyer.this.random.nextDouble() < 0.01) {
+                        for (int boop = 0; boop < 20; boop++) {
                             player.sendMessage(" ");
+                        }
+                    }
+                    if (Annoyer.this.random.nextDouble() < 0.01) {
+                        for (int boop = 0; boop < 20; boop++) {
+                            player.sendMessage("HEY, LISTEN");
                         }
                     }
                 }
             }
         }
     }
-    private final ListenBlock blockListener = new ListenBlock(this);
-    private final ListenPlayer playerListener = new ListenPlayer(this);
 
-    private final ArrayList<Player> annoyanceList = new ArrayList<Player>();
+    public final ArrayList<Player> annoyanceList = new ArrayList<Player>();
 
     public Random random = new Random();
 
-    private int highestBlockID;
+    private int oneBlockIDTooHigh;
 
     public boolean annoyed(Player player) {
         return this.annoyanceList.contains(player);
@@ -67,10 +66,14 @@ public class Annoyer extends JavaPlugin {
         this.getServer().getLogger().info("[Annoyer] " + message);
     }
 
+    public void message(Player player, String message) {
+        player.sendMessage(ChatColor.values()[this.random.nextInt(16)] + message);
+    }
+
     public Material newMat() {
         Material newMat = null;
         while (newMat == null) {
-            newMat = Material.getMaterial(this.random.nextInt(this.highestBlockID));
+            newMat = Material.getMaterial(this.random.nextInt(this.oneBlockIDTooHigh));
         }
         return newMat;
     }
@@ -117,24 +120,14 @@ public class Annoyer extends JavaPlugin {
     @Override
     public void onEnable() {
         final PluginManager pm = this.getServer().getPluginManager();
-        pm.registerEvent(Type.BLOCK_BREAK, this.blockListener, Priority.Highest, this);
-        pm.registerEvent(Type.BLOCK_PLACE, this.blockListener, Priority.Highest, this);
-        pm.registerEvent(Type.PLAYER_MOVE, this.playerListener, Priority.Highest, this);
-        pm.registerEvent(Type.PLAYER_CHAT, this.playerListener, Priority.Lowest, this);
-        pm.registerEvent(Type.PLAYER_QUIT, new PlayerListener() {
-            @Override
-            public void onPlayerQuit(PlayerQuitEvent event) {
-                if (Annoyer.this.annoyanceList.remove(event.getPlayer())) {
-                    Annoyer.this.update(ChatColor.RED + "[Annoyer] " + ChatColor.LIGHT_PURPLE + event.getPlayer().getName() + ChatColor.RED + " dodged annoyance");
-                }
-            }
-        }, Priority.Normal, this);
+        pm.registerEvents(new ListenBlock(this), this);
+        pm.registerEvents(new ListenPlayer(this), this);
         for (int x = 0; x < 256; x++) {
             if (Material.getMaterial(x) != null) {
-                this.highestBlockID = x;
+                this.oneBlockIDTooHigh = x;
             }
         }
-        this.highestBlockID++;
+        this.oneBlockIDTooHigh++;
         this.getServer().getScheduler().scheduleAsyncRepeatingTask(this, new Durp(), 20, 20);
         this.getServer().getLogger().info("[Annoyer] Enabled!");
     }
