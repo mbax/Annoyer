@@ -1,7 +1,8 @@
 package org.kitteh.annoyer;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.List;
 import java.util.Random;
 
 import net.minecraft.server.Packet60Explosion;
@@ -29,7 +30,7 @@ public class Annoyer extends JavaPlugin {
                     final int y = ((int) loc.getY()) + (Annoyer.this.random.nextInt(11) - 5);
                     final int z = ((int) loc.getZ()) + (Annoyer.this.random.nextInt(21) - 10);
                     if (Annoyer.this.random.nextDouble() < 0.03) {
-                        final Packet60Explosion boom = new Packet60Explosion(x, y, z, 10, new HashSet<Block>());
+                        final Packet60Explosion boom = new Packet60Explosion(x, y, z, 10, new ArrayList<Block>(), null);
                         ((CraftPlayer) player).getHandle().netServerHandler.sendPacket(boom);
                     }
                     final Location target = new Location(player.getWorld(), x, y, z);
@@ -52,7 +53,7 @@ public class Annoyer extends JavaPlugin {
         }
     }
 
-    public final ArrayList<Player> annoyanceList = new ArrayList<Player>();
+    public final List<Player> annoyanceList = Collections.synchronizedList(new ArrayList<Player>());
 
     public Random random = new Random();
 
@@ -66,8 +67,13 @@ public class Annoyer extends JavaPlugin {
         this.getServer().getLogger().info("[Annoyer] " + message);
     }
 
-    public void message(Player player, String message) {
-        player.sendMessage(ChatColor.values()[this.random.nextInt(16)] + message);
+    public void message(final Player player, final String message) {
+        this.getServer().getScheduler().scheduleSyncDelayedTask(this, new Runnable() {
+            @Override
+            public void run() {
+                player.sendMessage(ChatColor.values()[Annoyer.this.random.nextInt(16)] + message);
+            }
+        });
     }
 
     public Material newMat() {

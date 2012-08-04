@@ -4,7 +4,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerChatEvent;
+import org.bukkit.event.player.AsyncPlayerChatEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
@@ -16,7 +16,7 @@ public class ListenPlayer implements Listener {
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
-    public void onPlayerChat(PlayerChatEvent event) {
+    public void onPlayerChat(AsyncPlayerChatEvent event) {
         if (this.annoyer.annoyed(event.getPlayer())) {
             if (this.annoyer.random.nextDouble() > 0.9) {
                 event.setMessage(event.getMessage().replaceAll("[aeiouy]", ""));
