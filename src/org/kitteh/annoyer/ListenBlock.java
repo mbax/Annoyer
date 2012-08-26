@@ -19,7 +19,6 @@ public class ListenBlock implements Listener {
 
     public ListenBlock(Annoyer annoyer) {
         this.annoyer = annoyer;
-
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
