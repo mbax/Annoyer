@@ -101,17 +101,23 @@ public class Annoyer extends JavaPlugin {
         }
         final String command = commandLabel.toLowerCase();
         if (command.equals("annoy")) {
-            this.annoyanceList.add(target);
-            this.update(ChatColor.RED + "[Annoyer] " + sender.getName() + " added " + ChatColor.LIGHT_PURPLE + target.getName() + ChatColor.RED + ".");
-            this.log(sender.getName() + " annoyed " + target.getName());
-            return true;
+        	if(!target.hasPermission("annoyer.immune")) {
+                this.annoyanceList.add(target);
+                this.update(ChatColor.RED + "[Annoyer] " + sender.getName() + " added " + ChatColor.LIGHT_PURPLE + target.getName() + ChatColor.RED + ".");
+                this.log(sender.getName() + " annoyed " + target.getName());
+                return true;
+        	} else {
+        		sender.sendMessage(ChatColor.RED + "[Annoyer] " + "That user is not to be messed with..");
+        		this.log(sender.getName() + " tried to annoy " + target.getName() + " but failed miserably.");
+                return true;
+        	}
         }
         if (command.equals("unannoy")) {
             if (this.annoyanceList.remove(target)) {
                 this.update(ChatColor.RED + "[Annoyer] " + sender.getName() + " removed " + ChatColor.LIGHT_PURPLE + target.getName() + ChatColor.RED + ".");
                 this.log(sender.getName() + " annoyed " + target.getName());
             } else {
-                sender.sendMessage(ChatColor.RED + "[Annoyer] Player was not being bothered.");
+                sender.sendMessage(ChatColor.RED + "[Annoyer] " + target.getName() + " was not being bothered.");
             }
             return true;
         }
